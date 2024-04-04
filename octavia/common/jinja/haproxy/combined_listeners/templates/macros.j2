@@ -202,13 +202,18 @@ frontend {{ listener.id }}
         {% else %}
             {% set monitor_port_opt = "" %}
         {% endif %}
+        {% if pool.alpn_protocols is defined %}
+            {% set alpn_opt = " check-alpn %s"|format(pool.alpn_protocols) %}
+        {% else %}
+            {% set alpn_opt = "" %}
+        {% endif %}
         {% if pool.health_monitor.type == constants.HEALTH_MONITOR_HTTPS %}
             {% set monitor_ssl_opt = " check-ssl verify none" %}
         {% else %}
             {% set monitor_ssl_opt = "" %}
         {% endif %}
-        {% set hm_opt = " check%s inter %ds fall %d rise %d%s%s"|format(
-            monitor_ssl_opt, pool.health_monitor.delay,
+        {% set hm_opt = " check%s%s inter %ds fall %d rise %d%s%s"|format(
+            monitor_ssl_opt, alpn_opt, pool.health_monitor.delay,
             pool.health_monitor.fall_threshold,
             pool.health_monitor.rise_threshold, monitor_addr_opt,
             monitor_port_opt) %}
@@ -364,9 +369,6 @@ backend {{ pool.id }}:{{ listener.id }}
     option httpchk {{ pool.health_monitor.http_method }} {{ pool.health_monitor.url_path }}
             {% endif %}
     http-check expect rstatus {{ pool.health_monitor.expected_codes }}
-        {% endif %}
-        {% if pool.health_monitor.type == constants.HEALTH_MONITOR_TLS_HELLO %}
-    option ssl-hello-chk
         {% endif %}
         {% if pool.health_monitor.type == constants.HEALTH_MONITOR_PING %}
     option external-check
